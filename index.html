@@ -10,12 +10,10 @@
     .card{max-width:900px;margin:1rem auto}
   </style>
 
-  <!-- Адрес твоего бэкенда на Render -->
   <script>
     window.API_BASE = "https://physics-calculator-alpha.onrender.com";
   </script>
 
-  <!-- ВЕСЬ JS — здесь -->
   <script>
     async function postJson(url, data){
       const res = await fetch(window.API_BASE + url, {
@@ -70,23 +68,26 @@
           if(resp.result==='SUCCESS'){
             updateTemps(resp.data.celsius);
             document.getElementById('resistance').value = r.toFixed(1);
-          } else {
-            alert(resp.message);
-          }
+          } else { alert(resp.message); }
           return;
         }
-
         const tc = toCelsiusFromInputs();
         const resp = await postJson('/api/rtd/resistance', {type, temperatureCelsius: tc, r0});
         if(resp.result==='SUCCESS'){
           document.getElementById('resistance').value = resp.data.resistanceOhm.toFixed(1);
           updateTemps(tc);
-        } else {
-          alert(resp.message);
-        }
+        } else { alert(resp.message); }
       } catch (err){
         alert('Ошибка запроса: ' + err.message);
       }
+    }
+
+    // ✳️ Новая функция — сброс формы
+    function resetForm(){
+      document.getElementById('celsius').value = '';
+      document.getElementById('kelvin').value = '';
+      document.getElementById('fahrenheit').value = '';
+      document.getElementById('resistance').value = '';
     }
   </script>
 </head>
@@ -126,10 +127,10 @@
       </div>
       <div class="col-12 d-flex gap-2">
         <button class="btn btn-primary flex-fill" onclick="calculateAll(event)">Рассчитать</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">Сбросить</button>
       </div>
     </form>
   </div>
 </div>
 </body>
 </html>
-
