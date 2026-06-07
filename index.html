@@ -3,18 +3,476 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Калькулятор термометров сопротивления</title>
+  <title data-i18n="title">Калькулятор термометров сопротивления</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body{background:#f7f7f7}
-    .card{max-width:900px;margin:1rem auto}
+    body{
+      background: #f5f7fa;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card{
+      max-width: 900px;
+      margin: 1rem auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      background: white;
+      border: 1px solid #e5e7eb;
+    }
+    .language-selector{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+    }
+    .chart-container{
+      position: relative;
+      height: 400px;
+      margin-top: 2rem;
+    }
+
+    /* Блоки с нейтральным фоном */
+    .info-block {
+      background: #f9fafb;
+      padding: 18px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid #e5e7eb;
+    }
+    .info-block.temperature {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .info-block.resistance {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .info-block.export {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .info-block.graph {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* Радиокнопки стилизованные */
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .radio-option {
+      position: relative;
+    }
+    .radio-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+    }
+    .radio-option label {
+      display: inline-block;
+      padding: 8px 16px;
+      background: white;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+      font-size: 14px;
+      color: #374151;
+    }
+    .radio-option input[type="radio"]:checked + label {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+    .radio-option label:hover {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    /* Кастомный input для R0 */
+    .custom-r0-input {
+      max-width: 120px;
+      display: inline-block;
+      margin-left: 10px;
+    }
+
+    /* Кнопки */
+    .btn-calculate {
+      background: #2563eb;
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 12px 24px;
+      font-size: 15px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-calculate:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-clear {
+      background: #6b7280;
+      border: none;
+      color: white;
+      font-weight: 500;
+      padding: 12px 24px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-clear:hover {
+      background: #4b5563;
+      transform: translateY(-1px);
+    }
+
+    /* Заголовки секций */
+    .section-title {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e5e7eb;
+      font-size: 15px;
+    }
+
+    /* Результат */
+    .result-display {
+      background: #f0f9ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 16px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    /* Стили для полей ввода */
+    .form-control {
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .form-control:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      outline: none;
+    }
+    .form-control.invalid {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    .form-control.invalid:focus {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+
+    /* Метки обязательных и опциональных полей */
+    .field-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #374151;
+      font-size: 14px;
+    }
+    .required-badge {
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .optional-badge {
+      color: #6b7280;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Стили для вкладок */
+    .nav-tabs {
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .nav-tabs .nav-link {
+      color: #6b7280;
+      border: none;
+      border-bottom: 3px solid transparent;
+      padding: 12px 24px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .nav-tabs .nav-link:hover {
+      color: #2563eb;
+      border-bottom-color: #bfdbfe;
+    }
+    .nav-tabs .nav-link.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+      background: transparent;
+    }
+    .tab-content {
+      padding-top: 1rem;
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+      .radio-group {
+        flex-direction: column;
+      }
+      .radio-option label {
+        width: 100%;
+        text-align: center;
+      }
+      .nav-tabs .nav-link {
+        padding: 10px 16px;
+        font-size: 14px;
+      }
+    }
   </style>
 
+  <!-- ==================== API CONFIGURATION ==================== -->
+  <!-- ВАЖНО! Перед деплоем в продакшн измените API_BASE на URL вашего бэкенда -->
+  <!-- IMPORTANT! Before deploying to production, change API_BASE to your backend URL -->
   <script>
+    // ЛОКАЛЬНАЯ РАЗРАБОТКА / LOCAL DEVELOPMENT:
+    // Используйте пустую строку "" для локальной разработки
+    // Use empty string "" for local development
+    // window.API_BASE = "";
+
+    // ПРОДАКШН / PRODUCTION:
+    // Раскомментируйте и укажите URL вашего бэкенда
+    // Uncomment and specify your backend URL
     window.API_BASE = "https://physics-calculator-alpha.onrender.com";
   </script>
+  <!-- ========================================================== -->
 
+  <!-- ВЕСЬ JS — здесь -->
   <script>
+    // ============ ИНТЕРНАЦИОНАЛИЗАЦИЯ ============
+    let currentLang = 'ru';
+    let currentTranslations = {};
+
+    // Диапазоны температур для PT385 (самый распространенный тип)
+    const TEMP_RANGES = {
+      celsius: { min: -200, max: 850, unit: '°C' },
+      kelvin: { min: 73, max: 1123, unit: 'K' },
+      fahrenheit: { min: -328, max: 1562, unit: '°F' }
+    };
+
+    const translations = {
+      ru: {
+        'title': 'Калькулятор термометров сопротивления',
+        'mainTitle': 'Калькулятор термометров сопротивления',
+        'sensorType': 'Тип датчика',
+        'r0Label': 'R0, Ом',
+        'temperatureC': 'Температура, °C',
+        'temperatureK': 'Температура, K',
+        'temperatureF': 'Температура, °F',
+        'resistance': 'Сопротивление, Ом',
+        'resistancePlaceholder': 'Заполните или температуру, или сопротивление',
+        'calculate': 'Рассчитать',
+        'clear': 'Очистить',
+        'exportTable': 'Экспорт таблицы',
+        'tableMode': 'Режим таблицы',
+        'temperatureToResistance': 'Температура → Сопротивление',
+        'resistanceToTemperature': 'Сопротивление → Температура',
+        'from': 'От:',
+        'to': 'До:',
+        'step': 'Шаг:',
+        'downloadCSV': 'Скачать CSV',
+        'graphTitle': 'График зависимости',
+        'buildGraph': 'Построить график',
+        'fillOneField': 'Заполните одно поле температуры или сопротивление',
+        'fillOnlyOne': 'Заполните только одно поле',
+        'requestError': 'Ошибка запроса:',
+        'temperature': 'Температура',
+        'resistanceOhm': 'Сопротивление, Ом',
+        'required': 'обязательно',
+        'optional': 'опционально',
+        'requiredOneOf': 'обязательно - заполните одно поле',
+        'temperatureOrResistance': 'Температура или Сопротивление',
+        'validRange': 'Допустимый диапазон для',
+        'humidityCalculator': 'Калькулятор влажности',
+        'absoluteHumidity': 'Абсолютная влажность',
+        'relativeHumidity': 'Относительная влажность',
+        'dewPoint': 'Точка росы',
+        'temperatureLabel': 'Температура',
+        'humidityPercent': 'Относительная влажность, %',
+        'humidityGM3': 'Абсолютная влажность, г/м³',
+        'dewPointC': 'Точка росы, °C',
+        'calculateHumidity': 'Рассчитать влажность',
+        'decimalPrecision': 'Знаков после запятой',
+        'pressure': 'Атмосферное давление',
+        'pressureUnit': 'Единицы давления',
+        'hPa': 'гПа (гектопаскали)',
+        'mmHg': 'мм рт. ст.',
+        'calcAbsoluteHumidity': 'Рассчитать абсолютную влажность',
+        'calcRelativeHumidity': 'Рассчитать относительную влажность',
+        'calcDewPoint': 'Рассчитать точку росы',
+        'absoluteHumidityCalc': 'Абсолютная влажность воздуха',
+        'relativeHumidityCalc': 'Относительная влажность воздуха',
+        'dewPointCalc': 'Определение точки росы',
+        'humidityPercent2': 'Влажность, %',
+        'absoluteHumidityKG': 'Абсолютная влажность воздуха, кг/м3',
+        'result': 'Результат',
+        'tabRTD': 'Термометры сопротивления (RTD)',
+        'tabHumidity': 'Калькуляторы влажности'
+      },
+      en: {
+        'title': 'RTD Calculator',
+        'mainTitle': 'Resistance Temperature Detector Calculator',
+        'sensorType': 'Sensor Type',
+        'r0Label': 'R0, Ohm',
+        'temperatureC': 'Temperature, °C',
+        'temperatureK': 'Temperature, K',
+        'temperatureF': 'Temperature, °F',
+        'resistance': 'Resistance, Ohm',
+        'resistancePlaceholder': 'Fill either temperature or resistance',
+        'calculate': 'Calculate',
+        'clear': 'Clear',
+        'exportTable': 'Export Table',
+        'tableMode': 'Table Mode',
+        'temperatureToResistance': 'Temperature → Resistance',
+        'resistanceToTemperature': 'Resistance → Temperature',
+        'from': 'From:',
+        'to': 'To:',
+        'step': 'Step:',
+        'downloadCSV': 'Download CSV',
+        'graphTitle': 'Dependency Graph',
+        'buildGraph': 'Build Graph',
+        'fillOneField': 'Fill one temperature field or resistance',
+        'fillOnlyOne': 'Fill only one field',
+        'requestError': 'Request error:',
+        'temperature': 'Temperature',
+        'resistanceOhm': 'Resistance, Ohm',
+        'required': 'required',
+        'optional': 'optional',
+        'requiredOneOf': 'required - fill one field',
+        'temperatureOrResistance': 'Temperature or Resistance',
+        'validRange': 'Valid range for',
+        'humidityCalculator': 'Humidity Calculator',
+        'absoluteHumidity': 'Absolute Humidity',
+        'relativeHumidity': 'Relative Humidity',
+        'dewPoint': 'Dew Point',
+        'temperatureLabel': 'Temperature',
+        'humidityPercent': 'Relative Humidity, %',
+        'humidityGM3': 'Absolute Humidity, g/m³',
+        'dewPointC': 'Dew Point, °C',
+        'calculateHumidity': 'Calculate Humidity',
+        'decimalPrecision': 'Decimal places',
+        'pressure': 'Atmospheric Pressure',
+        'pressureUnit': 'Pressure Units',
+        'hPa': 'hPa (hectopascals)',
+        'mmHg': 'mmHg',
+        'calcAbsoluteHumidity': 'Calculate Absolute Humidity',
+        'calcRelativeHumidity': 'Calculate Relative Humidity',
+        'calcDewPoint': 'Calculate Dew Point',
+        'absoluteHumidityCalc': 'Absolute Humidity of Air',
+        'relativeHumidityCalc': 'Relative Humidity of Air',
+        'dewPointCalc': 'Dew Point Determination',
+        'humidityPercent2': 'Humidity, %',
+        'absoluteHumidityKG': 'Absolute humidity of air, kg/m3',
+        'result': 'Result',
+        'tabRTD': 'Resistance Temperature Detectors (RTD)',
+        'tabHumidity': 'Humidity Calculators'
+      },
+      zh: {
+        'title': 'RTD计算器',
+        'mainTitle': '电阻温度检测器计算器',
+        'sensorType': '传感器类型',
+        'r0Label': 'R0, 欧姆',
+        'temperatureC': '温度, °C',
+        'temperatureK': '温度, K',
+        'temperatureF': '温度, °F',
+        'resistance': '电阻, 欧姆',
+        'resistancePlaceholder': '填写温度或电阻',
+        'calculate': '计算',
+        'clear': '清除',
+        'exportTable': '导出表格',
+        'tableMode': '表格模式',
+        'temperatureToResistance': '温度 → 电阻',
+        'resistanceToTemperature': '电阻 → 温度',
+        'from': '从:',
+        'to': '到:',
+        'step': '步长:',
+        'downloadCSV': '下载 CSV',
+        'graphTitle': '依赖关系图',
+        'buildGraph': '构建图表',
+        'fillOneField': '填写一个温度字段或电阻',
+        'fillOnlyOne': '只填写一个字段',
+        'requestError': '请求错误:',
+        'temperature': '温度',
+        'resistanceOhm': '电阻, 欧姆',
+        'required': '必填',
+        'optional': '可选',
+        'requiredOneOf': '必填 - 填写一个字段',
+        'temperatureOrResistance': '温度或电阻',
+        'validRange': '有效范围',
+        'humidityCalculator': '湿度计算器',
+        'absoluteHumidity': '绝对湿度',
+        'relativeHumidity': '相对湿度',
+        'dewPoint': '露点',
+        'temperatureLabel': '温度',
+        'humidityPercent': '相对湿度, %',
+        'humidityGM3': '绝对湿度, g/m³',
+        'dewPointC': '露点, °C',
+        'calculateHumidity': '计算湿度',
+        'decimalPrecision': '小数位数',
+        'pressure': '大气压力',
+        'pressureUnit': '压力单位',
+        'hPa': '百帕',
+        'mmHg': '毫米汞柱',
+        'calcAbsoluteHumidity': '计算绝对湿度',
+        'calcRelativeHumidity': '计算相对湿度',
+        'calcDewPoint': '计算露点',
+        'absoluteHumidityCalc': '空气绝对湿度',
+        'relativeHumidityCalc': '空气相对湿度',
+        'dewPointCalc': '露点测定',
+        'humidityPercent2': '湿度, %',
+        'absoluteHumidityKG': '空气绝对湿度, kg/m3',
+        'result': '结果',
+        'tabRTD': '电阻温度检测器 (RTD)',
+        'tabHumidity': '湿度计算器'
+      }
+    };
+
+    function switchLang() {
+      currentLang = document.getElementById('lang').value;
+      currentTranslations = translations[currentLang] || translations['ru'];
+
+      // Update all elements with data-i18n attribute
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (currentTranslations[key]) {
+          if (el.tagName === 'INPUT' && el.placeholder !== undefined) {
+            el.placeholder = currentTranslations[key];
+          } else if (el.tagName === 'OPTION') {
+            el.textContent = currentTranslations[key];
+          } else {
+            el.textContent = currentTranslations[key];
+          }
+        }
+      });
+
+      // Update title
+      document.title = currentTranslations['title'];
+
+      // Update chart if it exists
+      if (window.chartInstance) {
+        updateChartLanguage();
+      }
+    }
+
+    // ============ API FUNCTIONS ============
     async function postJson(url, data){
       const res = await fetch(window.API_BASE + url, {
         method: 'POST',
@@ -22,8 +480,18 @@
         body: JSON.stringify(data)
       });
       if(!res.ok){
-        const text = await res.text().catch(()=> '');
-        throw new Error(`HTTP ${res.status} ${res.statusText} ${text}`);
+        // Пытаемся получить JSON с сообщением об ошибке
+        try {
+          const errorData = await res.json();
+          // Возвращаем только сообщение, без HTTP кодов
+          throw new Error(errorData.message || 'Произошла ошибка');
+        } catch(e) {
+          if(e.message && !e.message.includes('JSON')){
+            throw e;
+          }
+          // Если не удалось распарсить JSON
+          throw new Error('Ошибка соединения с сервером');
+        }
       }
       return await res.json();
     }
@@ -51,86 +519,850 @@
       return fields.reduce((acc,id)=>acc + (document.getElementById(id).value.trim()!==''?1:0),0);
     }
 
+    function getFilledTemperatureField(){
+      // Определяет, какое температурное поле было заполнено
+      if(document.getElementById('celsius').value.trim() !== '') return 'celsius';
+      if(document.getElementById('kelvin').value.trim() !== '') return 'kelvin';
+      if(document.getElementById('fahrenheit').value.trim() !== '') return 'fahrenheit';
+      return null;
+    }
+
+    function showErrorModal(message, tempField = null){
+      // Добавляем диапазон температур, если ошибка связана с температурой
+      let fullMessage = message;
+
+      if(tempField && TEMP_RANGES[tempField]){
+        const range = TEMP_RANGES[tempField];
+        const fieldNames = {
+          'celsius': currentTranslations['temperatureC'] || 'Температура, °C',
+          'kelvin': currentTranslations['temperatureK'] || 'Температура, K',
+          'fahrenheit': currentTranslations['temperatureF'] || 'Температура, °F'
+        };
+        const validRangeLabel = currentTranslations['validRange'] || 'Допустимый диапазон для';
+        fullMessage += `\n\n${validRangeLabel} ${fieldNames[tempField]}:\n${range.min}${range.unit} ... ${range.max}${range.unit}`;
+      }
+
+      alert(fullMessage);
+    }
+
+    function validateFields(){
+      clearValidation();
+      const filled = countFilled();
+
+      if(filled===0){
+        // Подсветить все поля температуры и сопротивления красным
+        ['celsius','kelvin','fahrenheit','resistance'].forEach(id => {
+          document.getElementById(id).classList.add('invalid');
+        });
+        alert(currentTranslations['fillOneField'] || 'Заполните одно поле температуры или сопротивление');
+        return false;
+      }
+      if(filled>1){
+        // Подсветить все заполненные поля красным
+        ['celsius','kelvin','fahrenheit','resistance'].forEach(id => {
+          const el = document.getElementById(id);
+          if(el.value.trim()!==''){
+            el.classList.add('invalid');
+          }
+        });
+        alert(currentTranslations['fillOnlyOne'] || 'Заполните только одно поле');
+        return false;
+      }
+      return true;
+    }
+
+    function clearValidation(){
+      ['celsius','kelvin','fahrenheit','resistance'].forEach(id => {
+        document.getElementById(id).classList.remove('invalid');
+      });
+    }
+
     async function calculateAll(e){
       e.preventDefault();
-      const filled = countFilled();
-      if(filled===0){ alert('Заполните одно поле температуры или сопротивление'); return; }
-      if(filled>1){ alert('Заполните только одно поле'); return; }
+
+      if(!validateFields()){
+        return;
+      }
 
       const type = document.getElementById('type').value;
       const r0   = parseFloat(document.getElementById('r0').value);
       const rVal = document.getElementById('resistance').value.trim();
+      const tempField = getFilledTemperatureField();
 
       try {
         if(rVal!==''){
+          // Расчет температуры из сопротивления
           const r = parseFloat(rVal);
           const resp = await postJson('/api/rtd/temperature', {type, resistance: r, r0});
           if(resp.result==='SUCCESS'){
-            updateTemps(resp.data.celsius);
+            const celsius = resp.data.celsius;
+            // Заполняем все температурные поля
+            updateTemps(celsius);
             document.getElementById('resistance').value = r.toFixed(1);
-          } else { alert(resp.message); }
+            showResult(`✅ Температура: ${celsius.toFixed(2)}°C`);
+          } else {
+            showErrorModal(resp.message);
+          }
           return;
         }
+
+        // Расчет сопротивления из температуры
         const tc = toCelsiusFromInputs();
         const resp = await postJson('/api/rtd/resistance', {type, temperatureCelsius: tc, r0});
         if(resp.result==='SUCCESS'){
+          // Заполняем поле сопротивления
           document.getElementById('resistance').value = resp.data.resistanceOhm.toFixed(1);
+          // Заполняем все температурные поля
           updateTemps(tc);
-        } else { alert(resp.message); }
+          showResult(`✅ Сопротивление: ${resp.data.resistanceOhm.toFixed(2)} Ω`);
+        } else {
+          showErrorModal(resp.message, tempField);
+        }
       } catch (err){
-        alert('Ошибка запроса: ' + err.message);
+        // Показываем ошибку с диапазоном температур, если была введена температура
+        showErrorModal(err.message, tempField);
       }
     }
 
-    // ✳️ Новая функция — сброс формы
-    function resetForm(){
+    function showResult(text) {
+      const resultSection = document.getElementById('result-section');
+      const resultText = document.getElementById('result-text');
+      resultText.textContent = text;
+      resultSection.style.display = 'block';
+      resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function clearForm(){
       document.getElementById('celsius').value = '';
       document.getElementById('kelvin').value = '';
       document.getElementById('fahrenheit').value = '';
       document.getElementById('resistance').value = '';
+      document.getElementById('result-section').style.display = 'none';
+      clearValidation();
     }
+
+    // ============ R0 FUNCTIONS ============
+    function updateR0(value) {
+      const r0Input = document.getElementById('r0');
+      r0Input.value = value;
+      r0Input.disabled = true;
+    }
+
+    function enableCustomR0() {
+      const r0Input = document.getElementById('r0');
+      r0Input.disabled = false;
+      r0Input.focus();
+      r0Input.select();
+    }
+
+    // ============ CSV EXPORT ============
+    async function generateCSV() {
+      const mode = document.getElementById('table-mode').value;
+      const from = parseFloat(document.getElementById('range-from').value);
+      const to = parseFloat(document.getElementById('range-to').value);
+      const step = parseFloat(document.getElementById('range-step').value);
+      const type = document.getElementById('type').value;
+      const r0 = parseFloat(document.getElementById('r0').value);
+
+      const rows = [];
+      const BOM = '\uFEFF';
+
+      // Добавляем sep=; для корректного открытия в Excel
+      rows.push('sep=;');
+
+      if (mode === 't-to-r') {
+        rows.push('Temperature(°C);Resistance(Ohm)');
+        for (let temp = from; temp <= to; temp += step) {
+          try {
+            const resp = await postJson('/api/rtd/resistance', {type, temperatureCelsius: temp, r0});
+            if (resp.result === 'SUCCESS') {
+              rows.push(`${temp.toFixed(2)};${resp.data.resistanceOhm.toFixed(4)}`);
+            }
+          } catch (err) {
+            console.error('Error at temp', temp, err);
+          }
+        }
+      } else {
+        rows.push('Resistance(Ohm);Temperature(°C)');
+        for (let res = from; res <= to; res += step) {
+          try {
+            const resp = await postJson('/api/rtd/temperature', {type, resistance: res, r0});
+            if (resp.result === 'SUCCESS') {
+              rows.push(`${res.toFixed(2)};${resp.data.celsius.toFixed(4)}`);
+            }
+          } catch (err) {
+            console.error('Error at resistance', res, err);
+          }
+        }
+      }
+
+      // Add metadata
+      rows.push('');
+      rows.push(`Sensor Type;${type}`);
+      rows.push(`R0;${r0}`);
+
+      const blob = new Blob([BOM + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `rtd_table_${type}_${new Date().getTime()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ============ GRAPH BUILDING ============
+    let chartInstance = null;
+
+    async function buildGraph() {
+      const from = parseFloat(document.getElementById('graph-from').value);
+      const to = parseFloat(document.getElementById('graph-to').value);
+      const step = parseFloat(document.getElementById('graph-step').value);
+      const type = document.getElementById('type').value;
+      const r0 = parseFloat(document.getElementById('r0').value);
+
+      const temperatures = [];
+      const resistances = [];
+
+      for (let temp = from; temp <= to; temp += step) {
+        try {
+          const resp = await postJson('/api/rtd/resistance', {type, temperatureCelsius: temp, r0});
+          if (resp.result === 'SUCCESS') {
+            temperatures.push(temp);
+            resistances.push(resp.data.resistanceOhm);
+          }
+        } catch (err) {
+          console.error('Error at temp', temp, err);
+        }
+      }
+
+      const ctx = document.getElementById('myChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: temperatures,
+          datasets: [{
+            label: currentTranslations['resistanceOhm'] || 'Сопротивление, Ом',
+            data: resistances,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            title: {
+              display: true,
+              text: `${type} (R0=${r0}Ω)`
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: currentTranslations['temperature'] + ', °C' || 'Температура, °C'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: currentTranslations['resistanceOhm'] || 'Сопротивление, Ом'
+              }
+            }
+          }
+        }
+      });
+
+      document.getElementById('chart-section').style.display = 'block';
+    }
+
+    function updateChartLanguage() {
+      if (chartInstance) {
+        chartInstance.data.datasets[0].label = currentTranslations['resistanceOhm'] || 'Сопротивление, Ом';
+        chartInstance.options.scales.x.title.text = currentTranslations['temperature'] + ', °C' || 'Температура, °C';
+        chartInstance.options.scales.y.title.text = currentTranslations['resistanceOhm'] || 'Сопротивление, Ом';
+        chartInstance.update();
+      }
+    }
+
+    // ============ HUMIDITY CALCULATOR FUNCTIONS ============
+
+    // Обновление отображения точности для абсолютной влажности
+    function updateAbsPrecisionDisplay(value) {
+      document.getElementById('abs-precision-value').textContent = value;
+    }
+
+    // Обновление отображения точности для относительной влажности
+    function updateRelPrecisionDisplay(value) {
+      document.getElementById('rel-precision-value').textContent = value;
+    }
+
+    // Обновление отображения точности для точки росы
+    function updateDewPrecisionDisplay(value) {
+      document.getElementById('dew-precision-value').textContent = value;
+    }
+
+    // Конвертация давления в гПа
+    function convertPressureToHPa(pressure, unit) {
+      if (unit === 'mmHg') {
+        // 1 мм рт. ст. = 1.33322 гПа
+        return pressure * 1.33322;
+      }
+      return pressure; // уже в гПа
+    }
+
+    // Калькулятор 1: Абсолютная влажность
+    async function calculateAbsoluteHumidity(e) {
+      e.preventDefault();
+
+      const humidity = document.getElementById('abs-humidity-percent').value.trim();
+      const temp = document.getElementById('abs-temp').value.trim();
+      const pressure = document.getElementById('abs-pressure').value.trim();
+      const unit = document.getElementById('abs-pressure-unit').value;
+
+      // Валидация
+      if (!humidity || !temp || !pressure) {
+        alert('Все поля обязательны для заполнения');
+        return;
+      }
+
+      const temperatureCelsius = parseFloat(temp);
+      const pressureHPa = convertPressureToHPa(parseFloat(pressure), unit);
+      const precision = parseInt(document.getElementById('abs-precision').value);
+
+      try {
+        const response = await postJson('/api/humidity/absolute', {
+          temperatureCelsius: temperatureCelsius,
+          pressureHPa: pressureHPa,
+          relativeHumidity: parseFloat(humidity)
+        });
+
+        if (response.result === 'SUCCESS') {
+          const data = response.data;
+          // Конвертируем г/м³ в кг/м³
+          const absoluteHumidityKG = data.absoluteHumidity / 1000;
+          document.getElementById('abs-result').value = absoluteHumidityKG.toFixed(precision);
+          document.getElementById('abs-result-section').style.display = 'block';
+        } else {
+          alert(response.message);
+        }
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+      }
+    }
+
+    // Калькулятор 2: Относительная влажность
+    async function calculateRelativeHumidity(e) {
+      e.preventDefault();
+
+      const absoluteHumidity = document.getElementById('rel-absolute').value.trim();
+      const temp = document.getElementById('rel-temp').value.trim();
+      const pressure = document.getElementById('rel-pressure').value.trim();
+      const unit = document.getElementById('rel-pressure-unit').value;
+
+      // Валидация
+      if (!absoluteHumidity || !temp || !pressure) {
+        alert('Все поля обязательны для заполнения');
+        return;
+      }
+
+      const temperatureCelsius = parseFloat(temp);
+      const pressureHPa = convertPressureToHPa(parseFloat(pressure), unit);
+      // Конвертируем кг/м³ в г/м³
+      const absoluteHumidityGM3 = parseFloat(absoluteHumidity) * 1000;
+      const precision = parseInt(document.getElementById('rel-precision').value);
+
+      try {
+        const response = await postJson('/api/humidity/relative', {
+          temperatureCelsius: temperatureCelsius,
+          pressureHPa: pressureHPa,
+          absoluteHumidity: absoluteHumidityGM3
+        });
+
+        if (response.result === 'SUCCESS') {
+          const data = response.data;
+          document.getElementById('rel-result').value = data.relativeHumidity.toFixed(precision) + ' %';
+          document.getElementById('rel-result-section').style.display = 'block';
+        } else {
+          alert(response.message);
+        }
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+      }
+    }
+
+    // Калькулятор 3: Точка росы
+    async function calculateDewPoint(e) {
+      e.preventDefault();
+
+      const temp = document.getElementById('dew-temp').value.trim();
+      const humidity = document.getElementById('dew-humidity').value.trim();
+
+      // Валидация
+      if (!temp || !humidity) {
+        alert('Все поля обязательны для заполнения');
+        return;
+      }
+
+      const temperatureCelsius = parseFloat(temp);
+      const relativeHumidity = parseFloat(humidity);
+      const precision = parseInt(document.getElementById('dew-precision').value);
+
+      try {
+        // Для расчета точки росы используем стандартное давление
+        const response = await postJson('/api/humidity/dewpoint', {
+          temperatureCelsius: temperatureCelsius,
+          pressureHPa: 1013.25, // стандартное атмосферное давление
+          relativeHumidity: relativeHumidity
+        });
+
+        if (response.result === 'SUCCESS') {
+          const data = response.data;
+          document.getElementById('dew-result').value = data.dewPoint.toFixed(precision);
+          document.getElementById('dew-result-section').style.display = 'block';
+        } else {
+          alert(response.message);
+        }
+      } catch (err) {
+        alert('Ошибка: ' + err.message);
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('lang').value = 'ru';
+      switchLang();
+
+      // Add input event listeners to clear validation on user input
+      ['celsius','kelvin','fahrenheit','resistance'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+          el.classList.remove('invalid');
+        });
+      });
+
+    });
   </script>
 </head>
 <body>
-<div class="card shadow-sm">
+<div class="card shadow-sm position-relative">
+  <div class="language-selector">
+    <select id="lang" class="form-select form-select-sm" onchange="switchLang()" style="width:auto;">
+      <option value="ru">Русский</option>
+      <option value="en">English</option>
+      <option value="zh">中文</option>
+    </select>
+  </div>
+
   <div class="card-body">
-    <h3 class="text-center mb-4">Калькулятор термометров сопротивления</h3>
-    <form class="row g-3" onsubmit="return false;">
-      <div class="col-12 col-md-6">
-        <label class="form-label">Тип датчика</label>
-        <select id="type" class="form-select">
-          <option value="PT385">PT385</option>
-          <option value="PT391">PT391</option>
-          <option value="CU">CU</option>
-          <option value="NI">NI</option>
-        </select>
+    <!-- Вкладки навигации -->
+    <ul class="nav nav-tabs mb-4" id="calculatorTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="rtd-tab" data-bs-toggle="tab" data-bs-target="#rtd-content" type="button" role="tab" aria-controls="rtd-content" aria-selected="true">
+          <span data-i18n="tabRTD">Термометры сопротивления (RTD)</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="humidity-tab" data-bs-toggle="tab" data-bs-target="#humidity-content" type="button" role="tab" aria-controls="humidity-content" aria-selected="false">
+          <span data-i18n="tabHumidity">Калькуляторы влажности</span>
+        </button>
+      </li>
+    </ul>
+
+    <!-- Контент вкладок -->
+    <div class="tab-content" id="calculatorTabsContent">
+
+      <!-- Вкладка 1: RTD -->
+      <div class="tab-pane fade show active" id="rtd-content" role="tabpanel" aria-labelledby="rtd-tab">
+        <h3 class="text-center mb-4" data-i18n="mainTitle">Калькулятор термометров сопротивления</h3>
+
+    <!-- Main Calculator Form -->
+    <form onsubmit="return false;">
+
+      <!-- Блок: Тип датчика -->
+      <div class="info-block">
+        <div class="field-label">
+          <span data-i18n="sensorType">Тип датчика</span>
+          <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+        </div>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="sensor-type" id="type-PT385" value="PT385" checked onchange="document.getElementById('type').value=this.value">
+            <label for="type-PT385">PT-385</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="sensor-type" id="type-PT391" value="PT391" onchange="document.getElementById('type').value=this.value">
+            <label for="type-PT391">PT-391</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="sensor-type" id="type-CU" value="CU" onchange="document.getElementById('type').value=this.value">
+            <label for="type-CU">CU</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="sensor-type" id="type-NI" value="NI" onchange="document.getElementById('type').value=this.value">
+            <label for="type-NI">NI</label>
+          </div>
+        </div>
+        <input type="hidden" id="type" value="PT385">
       </div>
-      <div class="col-12 col-md-6">
-        <label class="form-label">R0, Ом</label>
-        <input id="r0" type="number" class="form-control" value="100">
+
+      <!-- Блок: R0 nominal value -->
+      <div class="info-block">
+        <div class="field-label">
+          <span data-i18n="r0Label">R₀ номинальное значение</span>
+          <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+        </div>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-100" value="100" checked onchange="updateR0(this.value)">
+            <label for="r0-100">100 Ω</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-250" value="250" onchange="updateR0(this.value)">
+            <label for="r0-250">250 Ω</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-500" value="500" onchange="updateR0(this.value)">
+            <label for="r0-500">500 Ω</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-1000" value="1000" onchange="updateR0(this.value)">
+            <label for="r0-1000">1000 Ω</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-2000" value="2000" onchange="updateR0(this.value)">
+            <label for="r0-2000">2000 Ω</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="r0-value" id="r0-custom" value="custom" onchange="enableCustomR0()">
+            <label for="r0-custom">Другое</label>
+          </div>
+        </div>
+        <div style="margin-top: 10px;">
+          <input id="r0" type="number" class="form-control custom-r0-input" value="100" min="1" disabled>
+        </div>
       </div>
-      <div class="col-12 col-md-4">
-        <label class="form-label">Температура, °C</label>
-        <input id="celsius" type="number" class="form-control" value="25">
+
+      <!-- Блок: Температура или Сопротивление -->
+      <div class="info-block temperature">
+        <div class="field-label">
+          <span data-i18n="temperatureOrResistance">Температура или Сопротивление</span>
+          <span class="required-badge">(<span data-i18n="requiredOneOf">обязательно - заполните одно поле</span>)</span>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label class="form-label" data-i18n="temperatureC">°C</label>
+            <input id="celsius" type="number" class="form-control" step="any">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" data-i18n="temperatureK">K</label>
+            <input id="kelvin" type="number" class="form-control" step="any">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label" data-i18n="temperatureF">°F</label>
+            <input id="fahrenheit" type="number" class="form-control" step="any">
+          </div>
+        </div>
+
+        <div class="row g-3 mt-2">
+          <div class="col-12">
+            <label class="form-label" data-i18n="resistance">Сопротивление, Ом</label>
+            <input id="resistance" type="number" class="form-control" step="any">
+          </div>
+        </div>
       </div>
-      <div class="col-12 col-md-4">
-        <label class="form-label">Температура, K</label>
-        <input id="kelvin" type="number" class="form-control">
+
+      <!-- Кнопки -->
+      <div class="d-flex gap-2 mt-3">
+        <button class="btn btn-calculate flex-fill" onclick="calculateAll(event)" data-i18n="calculate">Рассчитать</button>
+        <button class="btn btn-clear" onclick="clearForm()" data-i18n="clear">Очистить</button>
       </div>
-      <div class="col-12 col-md-4">
-        <label class="form-label">Температура, °F</label>
-        <input id="fahrenheit" type="number" class="form-control">
-      </div>
-      <div class="col-12">
-        <label class="form-label">Сопротивление, Ом</label>
-        <input id="resistance" type="number" class="form-control" placeholder="Заполните или температуру, или сопротивление">
-      </div>
-      <div class="col-12 d-flex gap-2">
-        <button class="btn btn-primary flex-fill" onclick="calculateAll(event)">Рассчитать</button>
-        <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">Сбросить</button>
+
+      <!-- Результат -->
+      <div id="result-section" style="display:none;">
+        <div class="result-display" id="result-text"></div>
       </div>
     </form>
+
+    <hr class="my-4">
+
+    <!-- CSV Export Section -->
+    <div class="info-block export">
+      <div class="field-label">
+        <span data-i18n="exportTable">📊 Экспорт таблицы</span>
+        <span class="optional-badge">(<span data-i18n="optional">опционально</span>)</span>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-12">
+          <label class="form-label" data-i18n="tableMode">Режим таблицы</label>
+          <select id="table-mode" class="form-select">
+            <option value="t-to-r" data-i18n="temperatureToResistance">Температура → Сопротивление</option>
+            <option value="r-to-t" data-i18n="resistanceToTemperature">Сопротивление → Температура</option>
+          </select>
+        </div>
+        <div class="col-4">
+          <label class="form-label" data-i18n="from">От:</label>
+          <input type="number" id="range-from" class="form-control" value="0">
+        </div>
+        <div class="col-4">
+          <label class="form-label" data-i18n="to">До:</label>
+          <input type="number" id="range-to" class="form-control" value="100">
+        </div>
+        <div class="col-4">
+          <label class="form-label" data-i18n="step">Шаг:</label>
+          <input type="number" id="range-step" class="form-control" value="10">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-success w-100" onclick="generateCSV()" data-i18n="downloadCSV">📥 Скачать CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Graph Building Section -->
+    <div class="info-block graph">
+      <div class="field-label">
+        <span data-i18n="graphTitle">📈 График зависимости</span>
+        <span class="optional-badge">(<span data-i18n="optional">опционально</span>)</span>
+      </div>
+      <div class="row g-3 mt-2">
+        <div class="col-4">
+          <label class="form-label" data-i18n="from">От:</label>
+          <input type="number" id="graph-from" class="form-control" value="-50">
+        </div>
+        <div class="col-4">
+          <label class="form-label" data-i18n="to">До:</label>
+          <input type="number" id="graph-to" class="form-control" value="200">
+        </div>
+        <div class="col-4">
+          <label class="form-label" data-i18n="step">Шаг:</label>
+          <input type="number" id="graph-step" class="form-control" value="10">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-info w-100" onclick="buildGraph()" data-i18n="buildGraph">📊 Построить график</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div id="chart-section" style="display:none;">
+      <div class="chart-container mt-4">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
+
+      </div>
+      <!-- Конец вкладки RTD -->
+
+      <!-- Вкладка 2: Калькуляторы влажности -->
+      <div class="tab-pane fade" id="humidity-content" role="tabpanel" aria-labelledby="humidity-tab">
+
+    <!-- Калькулятор 1: Абсолютная влажность воздуха -->
+    <div class="info-block">
+      <h3 class="text-center mb-4" data-i18n="absoluteHumidityCalc">Абсолютная влажность воздуха</h3>
+
+      <div class="row g-3">
+        <!-- Влажность % -->
+        <div class="col-12 col-md-4">
+          <div class="field-label">
+            <span data-i18n="humidityPercent2">Влажность, %</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="abs-humidity-percent" type="number" class="form-control" placeholder="60" step="any" min="0" max="100" required>
+        </div>
+
+        <!-- Температура -->
+        <div class="col-12 col-md-4">
+          <div class="field-label">
+            <span data-i18n="temperatureC">Температура, °C</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="abs-temp" type="number" class="form-control" placeholder="25" step="any" required>
+        </div>
+
+        <!-- Атмосферное давление -->
+        <div class="col-12 col-md-4">
+          <div class="field-label">
+            <span data-i18n="pressure">Атмосферное давление</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="abs-pressure" type="number" class="form-control" placeholder="760" step="any" required>
+        </div>
+
+        <!-- Единицы давления -->
+        <div class="col-12">
+          <div class="field-label">
+            <span data-i18n="pressureUnit">Единицы давления</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <select id="abs-pressure-unit" class="form-select" required>
+            <option value="mmHg" selected data-i18n="mmHg">мм рт. ст.</option>
+            <option value="hPa" data-i18n="hPa">гПа</option>
+          </select>
+        </div>
+
+        <!-- Точность -->
+        <div class="col-12">
+          <label class="form-label">
+            <span data-i18n="decimalPrecision">Знаков после запятой</span>: <strong id="abs-precision-value">6</strong>
+          </label>
+          <input type="range" class="form-range" id="abs-precision" min="0" max="20" value="6" oninput="updateAbsPrecisionDisplay(this.value)">
+        </div>
+      </div>
+
+      <!-- Кнопка расчета -->
+      <div class="mt-3">
+        <button class="btn btn-calculate w-100" onclick="calculateAbsoluteHumidity(event)" data-i18n="calculate">Рассчитать</button>
+      </div>
+
+      <!-- Результат -->
+      <div id="abs-result-section" style="display:none;">
+        <div class="mt-3">
+          <label class="form-label" data-i18n="absoluteHumidityKG">Абсолютная влажность воздуха, кг/м3</label>
+          <input id="abs-result" type="text" class="form-control" readonly style="background-color: #f0f9ff; font-weight: bold;">
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Калькулятор 2: Относительная влажность воздуха -->
+    <div class="info-block">
+      <h3 class="text-center mb-4" data-i18n="relativeHumidityCalc">Относительная влажность воздуха</h3>
+
+      <div class="row g-3">
+        <!-- Абсолютная влажность -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="absoluteHumidityKG">Абсолютная влажность воздуха, кг/м3</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="rel-absolute" type="number" class="form-control" placeholder="0.0138" step="any" required>
+        </div>
+
+        <!-- Температура -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="temperatureC">Температура, °C</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="rel-temp" type="number" class="form-control" placeholder="25" step="any" required>
+        </div>
+
+        <!-- Атмосферное давление -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="pressure">Атмосферное давление</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="rel-pressure" type="number" class="form-control" placeholder="760" step="any" required>
+        </div>
+
+        <!-- Единицы давления -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="pressureUnit">Единицы давления</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <select id="rel-pressure-unit" class="form-select" required>
+            <option value="mmHg" selected data-i18n="mmHg">мм рт. ст.</option>
+            <option value="hPa" data-i18n="hPa">гПа</option>
+          </select>
+        </div>
+
+        <!-- Точность -->
+        <div class="col-12">
+          <label class="form-label">
+            <span data-i18n="decimalPrecision">Знаков после запятой</span>: <strong id="rel-precision-value">3</strong>
+          </label>
+          <input type="range" class="form-range" id="rel-precision" min="0" max="20" value="3" oninput="updateRelPrecisionDisplay(this.value)">
+        </div>
+      </div>
+
+      <!-- Кнопка расчета -->
+      <div class="mt-3">
+        <button class="btn btn-calculate w-100" onclick="calculateRelativeHumidity(event)" data-i18n="calculate">Рассчитать</button>
+      </div>
+
+      <!-- Результат -->
+      <div id="rel-result-section" style="display:none;">
+        <div class="mt-3">
+          <label class="form-label" data-i18n="humidityPercent2">Относительная влажность воздуха, %</label>
+          <input id="rel-result" type="text" class="form-control" readonly style="background-color: #f0f9ff; font-weight: bold;">
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Калькулятор 3: Определение точки росы -->
+    <div class="info-block">
+      <h3 class="text-center mb-4" data-i18n="dewPointCalc">Определение точки росы</h3>
+
+      <div class="row g-3">
+        <!-- Температура -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="temperatureLabel">Температура</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="dew-temp" type="number" class="form-control" placeholder="20" step="any" required>
+        </div>
+
+        <!-- Относительная влажность -->
+        <div class="col-12 col-md-6">
+          <div class="field-label">
+            <span data-i18n="humidityPercent2">Относительная влажность воздуха (%)</span>
+            <span class="required-badge">(<span data-i18n="required">обязательно</span>)</span>
+          </div>
+          <input id="dew-humidity" type="number" class="form-control" placeholder="70" step="any" min="0" max="100" required>
+        </div>
+
+        <!-- Точность -->
+        <div class="col-12">
+          <label class="form-label">
+            <span data-i18n="decimalPrecision">Знаков после запятой</span>: <strong id="dew-precision-value">1</strong>
+          </label>
+          <input type="range" class="form-range" id="dew-precision" min="0" max="20" value="1" oninput="updateDewPrecisionDisplay(this.value)">
+        </div>
+      </div>
+
+      <!-- Кнопка расчета -->
+      <div class="mt-3">
+        <button class="btn btn-calculate w-100" onclick="calculateDewPoint(event)" data-i18n="calculate">Рассчитать</button>
+      </div>
+
+      <!-- Результат -->
+      <div id="dew-result-section" style="display:none;">
+        <div class="mt-3">
+          <label class="form-label" data-i18n="dewPointC">Точка росы (градусы)</label>
+          <input id="dew-result" type="text" class="form-control" readonly style="background-color: #f0f9ff; font-weight: bold;">
+        </div>
+      </div>
+    </div>
+
+      </div>
+      <!-- Конец вкладки Калькуляторы влажности -->
+
+    </div>
+    <!-- Конец tab-content -->
+
   </div>
 </div>
+
+<!-- Bootstrap JS для работы вкладок -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>
